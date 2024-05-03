@@ -32,13 +32,13 @@ app=FastAPI()
 
 @app.post("/register")
 def register_user(user: schemas.UserCreate, session: Session = Depends(get_session)):
-    existing_user = session.query(models.User).filter_by(email=user.email).first()
+    existing_user = session.query(models.User).filter_by(username=user.username).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Username already registered")
 
     encrypted_password =get_hashed_password(user.password)
 
-    new_user = models.User(username=user.username, email=user.email, password=encrypted_password )
+    new_user = models.User(name=user.name, username=user.username, password=encrypted_password )
 
     session.add(new_user)
     session.commit()
@@ -48,9 +48,9 @@ def register_user(user: schemas.UserCreate, session: Session = Depends(get_sessi
 
 @app.post('/login' ,response_model=schemas.TokenSchema)
 def login(request: schemas.requestdetails, db: Session = Depends(get_session)):
-    user = db.query(User).filter(User.email == request.email).first()
+    user = db.query(User).filter(User.username == request.username).first()
     if user is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect email")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect username")
     hashed_pass = user.password
     if not verify_password(request.password, hashed_pass):
         raise HTTPException(
@@ -77,7 +77,7 @@ def getusers( dependencies=Depends(JWTBearer()),session: Session = Depends(get_s
 
 @app.post('/change-password')
 def change_password(request: schemas.changepassword, db: Session = Depends(get_session)):
-    user = db.query(models.User).filter(models.User.email == request.email).first()
+    user = db.query(models.User).filter(models.User.username == request.username).first()
     if user is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
     
