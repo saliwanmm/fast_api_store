@@ -1,5 +1,5 @@
 import jwt
-import ast
+import json
 
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -134,7 +134,7 @@ def token_required(func):
     return wrapper
 
 
-def verify_token(token: str = Depends(JWTBearer())):
+def verify_token(token: str = Depends(JWTBearer())) -> str:
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
@@ -156,10 +156,13 @@ def create_sale_receipt(
     total_amount = sum(item.price * item.quantity for item in sale_receipt.products)
     rest_amount = sale_receipt.payment.amount - total_amount
 
+    # Перетворення products у формат JSON
+    products_json = json.dumps([item.dict() for item in sale_receipt.products])
+
     # Збереження чеку продажу в базі даних
     db_sale_receipt = DBSaleReceipt(
         user_id=current_user,
-        products=str(sale_receipt.products),
+        products=products_json,
         payment_type=sale_receipt.payment.type,
         payment_amount=sale_receipt.payment.amount,
         total_amount=total_amount,
@@ -179,33 +182,37 @@ def get_sale_receipt(
     current_user: int = Depends(verify_token),
     db: Session = Depends(get_session)
 ):
+    # Знайти чек за його ID
     db_receipt = db.query(DBSaleReceipt).filter(DBSaleReceipt.id == receipt_id).first()
     if not db_receipt:
         raise HTTPException(status_code=404, detail="Sale receipt not found")
 
-    products_string = db_receipt.products
+    # Перевірка чи користувач, який залогінений, створив цей рецепт
+    if int(db_receipt.user_id) != int(current_user):
+        raise HTTPException(status_code=403, detail="Unauthorized to access this sale receipt")
 
-   # Використання eval для перетворення рядка в об'єкти Python
-    products_list = eval(products_string)
-
-    # Створити список словників для продуктів
+   # Парсинг рядка продуктів у список словників
+    products_list = json.loads(db_receipt.products)
+    
+    # Створення списку продуктів з обчисленням загальної вартості
     products_dict_list = []
     for product_data in products_list:
-        # Отримати дані про кожен продукт і створити словник
         product_dict = {
-            "name": product_data.name,
-            "price": product_data.price,
-            "quantity": product_data.quantity,
-            "total": product_data.price * product_data.quantity
+            "name": product_data.get('name', ''),
+            "price": product_data.get('price', 0),
+            "quantity": product_data.get('quantity', 0),
+            "total": product_data.get('price', 0) * product_data.get('quantity', 0)
         }
         products_dict_list.append(product_dict)
 
+    # Дані про оплату
     payment_data = {
         "type": db_receipt.payment_type,
         "amount": db_receipt.payment_amount
     }
 
-    owner_user = db.query(DBUser).filter(DBUser.id == current_user).first()
+    # Знайти користувача, який створив цей чек (по його user_id)
+    owner_user = db.query(DBUser).filter(DBUser.id == db_receipt.user_id).first()
     if not owner_user:
         raise HTTPException(status_code=404, detail="User owner receipt not found")
 
@@ -217,7 +224,60 @@ def get_sale_receipt(
         "total": db_receipt.total_amount,
         "rest": db_receipt.rest_amount,
         "created_at": db_receipt.created_at,
-        "user_id": owner_user.name
+        "owner_user": owner_user.name
     }
 
     return response_data
+
+
+@app.get("/get_receipts", response_model=list[schemas.SaleReceiptResponse])
+def get_sale_receipt(
+    current_user: int = Depends(verify_token),
+    db: Session = Depends(get_session)
+):
+
+    # Отримання всіх рецептів, створених поточним користувачем
+    db_receipt_list = db.query(DBSaleReceipt).filter(DBSaleReceipt.user_id == current_user).all()
+
+    response_data_list = []
+
+    for db_receipt in db_receipt_list:
+
+        # Парсинг рядка продуктів у список словників
+        products_list = json.loads(db_receipt.products)
+        
+        # Створення списку продуктів з обчисленням загальної вартості
+        products_dict_list = []
+        for product_data in products_list:
+            product_dict = {
+                "name": product_data.get('name', ''),
+                "price": product_data.get('price', 0),
+                "quantity": product_data.get('quantity', 0),
+                "total": product_data.get('price', 0) * product_data.get('quantity', 0)
+            }
+            products_dict_list.append(product_dict)
+
+        # Дані про оплату
+        payment_data = {
+            "type": db_receipt.payment_type,
+            "amount": db_receipt.payment_amount
+        }
+
+        # Знайти користувача, який створив цей чек (по його user_id)
+        owner_user = db.query(DBUser).filter(DBUser.id == db_receipt.user_id).first()
+        if not owner_user:
+            raise HTTPException(status_code=404, detail="User owner receipt not found")
+
+        response_data = {
+            "id": db_receipt.id,
+            "products": products_dict_list,
+            "payment": payment_data,
+            "total": db_receipt.total_amount,
+            "rest": db_receipt.rest_amount,
+            "created_at": db_receipt.created_at,
+            "owner_user": owner_user.name
+        }
+
+        response_data_list.append(response_data)
+
+    return response_data_list

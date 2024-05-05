@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 
 from utils.database import Base
@@ -11,7 +11,7 @@ class SaleReceipt(Base):
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)  # Зв'язок з ідентифікатором користувача
-    products = Column(String(300), nullable=False)
+    products = Column(JSON, nullable=False)
     payment_type = Column(String(50), nullable=False)
     payment_amount = Column(Float)
     total_amount = Column(Float)

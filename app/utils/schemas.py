@@ -76,4 +76,4 @@ class SaleReceiptResponse(BaseModel):
     total: float
     rest: float
     created_at: datetime.datetime
-    user_id: int
+    owner_user: str
