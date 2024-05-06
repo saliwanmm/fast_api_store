@@ -19,7 +19,7 @@ op.create_table('sale_receipts',
 
 op.create_table(
     'token',
-    sa.Column('id', sa.Integer, primary_key=True),
+    sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
     sa.Column('user_id', sa.Integer),
     sa.Column('access_token', sa.String(450), primary_key=True),
     sa.Column('refresh_token', sa.String(450), nullable=False),

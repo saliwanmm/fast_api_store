@@ -4,6 +4,12 @@
 
 **REST API to create sales receipts with user registration**
 
+**All API doc(after start server)**
+
+```
+http://0.0.0.0:8000/docs#/
+```
+
 **API register user**
 
 ```
@@ -128,12 +134,6 @@ $ source venv/bin/activate
 $ pip install -r requirements.txt
 ```
 
-**Create .env file and insert there all code from .envexample file**
-
-```
-$ touch .env
-```
-
 **Build web and database containers**
 
 ```
@@ -146,20 +146,46 @@ $ sudo docker-compose build
 $ sudo docker-compose up
 ```
 
-**Go to the middle of the running container in a new terminal window**
+**Create alembic(open terminal when server start)**
 
 ```
-$ sudo docker-compose exec web bash
+$ alembic init alembic
 ```
 
-**Perform database migrations**
+**Replace file**
 
 ```
-$ python manage.py migrate
+Replace env.py from main directory to directory alembic
 ```
 
-**Create superuser**
+**Initial migrations(open terminal when server start)**
 
 ```
-$ python manage.py createsuperuser
+$ alembic revision --autogenerate -m "initial"
+```
+**Add function for migration tables to DB**
+
+```
+$ Open file alembic/versions/.........._initial.py and replace function upgrade from file test.py
+```
+**Delete all tables from DB without alembic_version(open terminal when server start)**
+
+```
+$ docker-compose exec db bash
+$ psql -U postgres
+$ psql \dt
+$ DROP TABLE name_table;
+...
+exit
+exit
+```
+**Add migrations to DB tables**
+
+```
+$ alembic upgrade head
+```
+**Use all API**
+
+```
+Postman or http://0.0.0.0:8000/docs#/ or ...
 ```
