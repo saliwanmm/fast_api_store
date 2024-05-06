@@ -5,6 +5,8 @@ import datetime
 
 from utils.database import Base
 
+
+# Модель користувачів
 class User(Base):
     __tablename__ = "users"
 
@@ -17,6 +19,7 @@ class User(Base):
     sale_receipts = relationship("SaleReceipt", back_populates="user")
 
 
+# Модель для токенів
 class TokenTable(Base):
     __tablename__ = "token"
     user_id = Column(Integer)

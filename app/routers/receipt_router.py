@@ -47,6 +47,7 @@ def create_sale_receipt(
     return db_sale_receipt
 
 
+# Ендпоінт для отримання чеку продаж за його ідентифікатором авторизованим користувачем
 @router.get("/sale_receipts/{receipt_id}", response_model=schemas.SaleReceiptResponse)
 def get_sale_receipt(
     receipt_id: int,
@@ -101,6 +102,7 @@ def get_sale_receipt(
     return response_data
 
 
+# Ендпоінт для отримання списку чеків продаж за різними фільтрами авторизованим користувачем
 @router.get("/get_receipts", response_model=list[schemas.SaleReceiptResponse])
 def get_sale_receipt(
     current_user: int = Depends(verify_token),
@@ -108,24 +110,28 @@ def get_sale_receipt(
     payment_type: Optional[str] = None,
     start_date: Optional[datetime] = Query(None),
     end_date: Optional[datetime] = Query(None),
-    limit: Optional[int] = Query(10, ge=1, le=100),  # Задаємо межі для limit: від 1 до 100
-    page: Optional[int] = Query(1, ge=1),  # Задаємо мінімальне значення для page: більше або рівне 1
-    offset: Optional[int] = Query(None, ge=0),  # Задаємо мінімальне значення для offset: більше або рівне 0
+    limit: Optional[int] = Query(10, ge=1, le=100),
+    page: Optional[int] = Query(1, ge=1),
+    offset: Optional[int] = Query(None, ge=0),
     db: Session = Depends(get_session)
 ):
 
-    # Отримання всіх рецептів, створених поточним користувачем
+    # Отримання всіх рецептів продаж, створених поточним користувачем
     query = db.query(DBSaleReceipt).filter(DBSaleReceipt.user_id == current_user)
 
+    # Задаємо фільтрацію по загальній сумі оплати
     if total_amount is not None:
         query = query.filter(DBSaleReceipt.total_amount > total_amount)
     
+    # Задаємо фільтрацію по типу оплати
     if payment_type is not None:
-        query = query.filter(DBSaleReceipt.payment_type == payment_type)  # Правильне порівняння за типом оплати
+        query = query.filter(DBSaleReceipt.payment_type == payment_type)
 
+    # Задаємо початкову дату фільтрації
     if start_date is not None:
         query = query.filter(DBSaleReceipt.created_at >= start_date)
     
+    # Задаємо кінцеву дату фільтрації
     if end_date is not None:
         query = query.filter(DBSaleReceipt.created_at <= end_date)
 
@@ -141,6 +147,7 @@ def get_sale_receipt(
 
     response_data_list = []
 
+    # Перебираємо список чеків продаж
     for db_receipt in db_receipt_list:
 
         # Парсинг рядка продуктів у список словників

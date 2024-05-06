@@ -18,5 +18,5 @@ class SaleReceipt(Base):
     rest_amount = Column(Float)
     created_at = Column(DateTime, default=datetime.datetime.now)
 
-    # Зв'язок з таблицею користувачів (один до багатьох)
+    # Зв'язок з таблицею користувачів
     user = relationship("User", back_populates="sale_receipts")

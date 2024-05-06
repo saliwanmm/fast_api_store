@@ -15,6 +15,7 @@ from utils.session import get_session, JWT_SECRET_KEY, ALGORITHM
 router = APIRouter()
 
 
+# Реєстрація нових користувачів
 @router.post("/register")
 def register_user(user: schemas.UserCreate, session: Session = Depends(get_session)):
     existing_user = session.query(usermodel.User).filter_by(username=user.username).first()
@@ -32,6 +33,7 @@ def register_user(user: schemas.UserCreate, session: Session = Depends(get_sessi
     return {"message":"user created successfully"}
 
 
+# Авторизація користувачів
 @router.post('/login' ,response_model=schemas.TokenSchema)
 def login(request: schemas.requestdetails, db: Session = Depends(get_session)):
     user = db.query(usermodel.User).filter(usermodel.User.username == request.username).first()
@@ -57,6 +59,7 @@ def login(request: schemas.requestdetails, db: Session = Depends(get_session)):
     }
 
 
+# Зміна пароля авторизованим користувачем
 @router.post('/change-password')
 def change_password(request: schemas.changepassword, db: Session = Depends(get_session)):
     user = db.query(usermodel.User).filter(usermodel.User.username == request.username).first()
@@ -73,12 +76,14 @@ def change_password(request: schemas.changepassword, db: Session = Depends(get_s
     return {"message": "Password changed successfully"}
 
 
+# Отримання всіх користувачів
 @router.get('/getusers')
 def getusers( dependencies=Depends(JWTBearer()),session: Session = Depends(get_session)):
     user = session.query(usermodel.User).all()
     return user
 
 
+# Логаут авторизованого користувача
 @router.post('/logout')
 def logout(dependencies=Depends(JWTBearer()), db: Session = Depends(get_session)):
     token=dependencies
